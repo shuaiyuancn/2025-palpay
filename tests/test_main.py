@@ -1,13 +1,14 @@
 from fastapi.testclient import TestClient
 from src.main import app, db
 import pytest
+from datetime import datetime, timedelta
 
 client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def clear_firestore():
     # Clear all collections before each test
-    for collection_name in ["users", "activities", "expenses"]:
+    for collection_name in ["users", "activities", "expenses", "audit_logs"]:
         for doc in db.collection(collection_name).stream():
             doc.reference.delete()
     yield
@@ -279,3 +280,113 @@ def test_delete_expense():
     # Verify deletion by trying to get the expense
     get_response = client.get(f"/expenses/{expense_id}")
     assert get_response.status_code == 404
+
+# Audit Log Tests
+def test_log_activity_creation():
+    activity_data = {"name": "Logged Activity", "participants": []}
+    response = client.post("/activities/", json=activity_data)
+    activity_id = response.json()["id"]
+
+    audit_logs_response = client.get("/audit-logs/")
+    audit_logs = audit_logs_response.json()
+    assert any(log["action"] == "ACTIVITY_CREATED" and log["entity_id"] == activity_id for log in audit_logs)
+
+def test_log_activity_update():
+    activity_data = {"name": "Activity to Update", "participants": []}
+    create_response = client.post("/activities/", json=activity_data)
+    activity_id = create_response.json()["id"]
+
+    updated_activity_data = {"id": activity_id, "name": "Updated Logged Activity", "participants": []}
+    client.put(f"/activities/{activity_id}", json=updated_activity_data)
+
+    audit_logs_response = client.get("/audit-logs/")
+    audit_logs = audit_logs_response.json()
+    assert any(log["action"] == "ACTIVITY_UPDATED" and log["entity_id"] == activity_id for log in audit_logs)
+
+def test_log_activity_deletion():
+    activity_data = {"name": "Activity to Delete Log", "participants": []}
+    create_response = client.post("/activities/", json=activity_data)
+    activity_id = create_response.json()["id"]
+
+    client.delete(f"/activities/{activity_id}")
+
+    audit_logs_response = client.get("/audit-logs/")
+    audit_logs = audit_logs_response.json()
+    assert any(log["action"] == "ACTIVITY_DELETED" and log["entity_id"] == activity_id for log in audit_logs)
+
+def test_log_expense_creation():
+    user_data = {"name": "Payer Log", "email": "payerlog@example.com"}
+    user_response = client.post("/users/", json=user_data)
+    payer_id = user_response.json()["id"]
+
+    activity_data = {"name": "Activity Log", "participants": [payer_id]}
+    activity_response = client.post("/activities/", json=activity_data)
+    activity_id = activity_response.json()["id"]
+
+    expense_data = {"activity_id": activity_id, "payer_id": payer_id, "amount": 10.0, "description": "Logged Expense"}
+    response = client.post("/expenses/", json=expense_data)
+    expense_id = response.json()["id"]
+
+    audit_logs_response = client.get("/audit-logs/")
+    audit_logs = audit_logs_response.json()
+    assert any(log["action"] == "EXPENSE_CREATED" and log["entity_id"] == expense_id for log in audit_logs)
+
+def test_log_expense_update():
+    user_data = {"name": "Payer Log Update", "email": "payerlogupdate@example.com"}
+    user_response = client.post("/users/", json=user_data)
+    payer_id = user_response.json()["id"]
+
+    activity_data = {"name": "Activity Log Update", "participants": [payer_id]}
+    activity_response = client.post("/activities/", json=activity_data)
+    activity_id = activity_response.json()["id"]
+
+    expense_data = {"activity_id": activity_id, "payer_id": payer_id, "amount": 20.0, "description": "Original Logged Expense"}
+    create_response = client.post("/expenses/", json=expense_data)
+    expense_id = create_response.json()["id"]
+
+    updated_expense_data = {"id": expense_id, "activity_id": activity_id, "payer_id": payer_id, "amount": 30.0, "description": "Updated Logged Expense"}
+    client.put(f"/expenses/{expense_id}", json=updated_expense_data)
+
+    audit_logs_response = client.get("/audit-logs/")
+    audit_logs = audit_logs_response.json()
+    assert any(log["action"] == "EXPENSE_UPDATED" and log["entity_id"] == expense_id for log in audit_logs)
+
+def test_log_expense_deletion():
+    user_data = {"name": "Payer Log Delete", "email": "payerlogdelete@example.com"}
+    user_response = client.post("/users/", json=user_data)
+    payer_id = user_response.json()["id"]
+
+    activity_data = {"name": "Activity Log Delete", "participants": [payer_id]}
+    activity_response = client.post("/activities/", json=activity_data)
+    activity_id = activity_response.json()["id"]
+
+    expense_data = {"activity_id": activity_id, "payer_id": payer_id, "amount": 40.0, "description": "Expense to Delete Log"}
+    create_response = client.post("/expenses/", json=expense_data)
+    expense_id = create_response.json()["id"]
+
+    client.delete(f"/expenses/{expense_id}")
+
+    audit_logs_response = client.get("/audit-logs/")
+    audit_logs = audit_logs_response.json()
+    assert any(log["action"] == "EXPENSE_DELETED" and log["entity_id"] == expense_id for log in audit_logs)
+
+def test_get_audit_logs():
+    # Create some activities and expenses to generate logs
+    user_data = {"name": "Audit User", "email": "audit@example.com"}
+    user_response = client.post("/users/", json=user_data)
+    user_id = user_response.json()["id"]
+
+    activity_data = {"name": "Audit Activity", "participants": [user_id]}
+    activity_response = client.post("/activities/", json=activity_data)
+    activity_id = activity_response.json()["id"]
+
+    expense_data = {"activity_id": activity_id, "payer_id": user_id, "amount": 10.0, "description": "Audit Expense"}
+    client.post("/expenses/", json=expense_data)
+
+    audit_logs_response = client.get("/audit-logs/")
+    assert audit_logs_response.status_code == 200
+    audit_logs = audit_logs_response.json()
+    assert len(audit_logs) >= 2  # At least activity created and expense created
+    # Verify sorting by timestamp (most recent first)
+    for i in range(len(audit_logs) - 1):
+        assert datetime.fromisoformat(audit_logs[i]["timestamp"]) >= datetime.fromisoformat(audit_logs[i+1]["timestamp"])

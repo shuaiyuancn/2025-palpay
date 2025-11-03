@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
+from datetime import datetime
 
 class User(BaseModel):
     id: Optional[str] = None
@@ -18,3 +19,12 @@ class Expense(BaseModel):
     payer_id: str
     amount: float
     description: Optional[str] = None
+
+class AuditLog(BaseModel):
+    id: Optional[str] = None
+    timestamp: datetime
+    action: str  # e.g., "ACTIVITY_CREATED", "EXPENSE_UPDATED"
+    entity_type: str  # e.g., "Activity", "Expense"
+    entity_id: str
+    user_id: Optional[str] = None  # User who performed the action
+    details: Optional[Dict] = None # Additional details about the change
