@@ -70,6 +70,28 @@ async def get_activity(activity_id: str):
         raise HTTPException(status_code=404, detail="Activity not found")
     return Activity(**activity_doc.to_dict())
 
+# Expense Endpoints
+@app.post("/expenses/", response_model=Expense)
+async def create_expense(expense: Expense):
+    expense_ref = db.collection("expenses").document()
+    expense.id = expense_ref.id
+    expense_ref.set(expense.model_dump())
+    return expense
+
+@app.get("/expenses/", response_model=List[Expense])
+async def get_all_expenses():
+    expenses = []
+    for doc in db.collection("expenses").stream():
+        expenses.append(Expense(**doc.to_dict()))
+    return expenses
+
+@app.get("/expenses/{expense_id}", response_model=Expense)
+async def get_expense(expense_id: str):
+    expense_doc = db.collection("expenses").document(expense_id).get()
+    if not expense_doc.exists:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    return Expense(**expense_doc.to_dict())
+
 
 if __name__ == "__main__":
     import uvicorn
