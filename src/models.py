@@ -20,6 +20,13 @@ class Expense(BaseModel):
     amount: float
     description: Optional[str] = None
 
+class Payment(BaseModel):
+    id: Optional[str] = None
+    payer_id: str
+    payee_id: str
+    amount: float
+    timestamp: datetime
+
 class AuditLog(BaseModel):
     id: Optional[str] = None
     timestamp: datetime

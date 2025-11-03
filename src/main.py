@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from typing import List, Dict
 
-from src.models import User, Activity, Expense, AuditLog
+from src.models import User, Activity, Expense, Payment, AuditLog
 from src.settlement import calculate_settlements
 from src.audit_log import log_audit_event
 
@@ -151,6 +151,48 @@ async def delete_expense(expense_id: str):
     expense_ref.delete()
     return
 
+# Payment Endpoints
+@app.post("/payments/", response_model=Payment)
+async def create_payment(payment: Payment):
+    payment_ref = db.collection("payments").document()
+    payment.id = payment_ref.id
+    payment_ref.set(payment.model_dump())
+    log_audit_event("PAYMENT_CREATED", "Payment", payment.id, details=payment.model_dump())
+    return payment
+
+@app.get("/payments/", response_model=List[Payment])
+async def get_all_payments():
+    payments = []
+    for doc in db.collection("payments").stream():
+        payments.append(Payment(**doc.to_dict()))
+    return payments
+
+@app.get("/payments/{payment_id}", response_model=Payment)
+async def get_payment(payment_id: str):
+    payment_doc = db.collection("payments").document(payment_id).get()
+    if not payment_doc.exists:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return Payment(**payment_doc.to_dict())
+
+@app.put("/payments/{payment_id}", response_model=Payment)
+async def update_payment(payment_id: str, payment: Payment):
+    payment_ref = db.collection("payments").document(payment_id)
+    if not payment_ref.get().exists:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    payment.id = payment_id
+    log_audit_event("PAYMENT_UPDATED", "Payment", payment.id, details=payment.model_dump())
+    payment_ref.set(payment.model_dump())
+    return payment
+
+@app.delete("/payments/{payment_id}", status_code=204)
+async def delete_payment(payment_id: str):
+    payment_ref = db.collection("payments").document(payment_id)
+    if not payment_ref.get().exists:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    log_audit_event("PAYMENT_DELETED", "Payment", payment_id)
+    payment_ref.delete()
+    return
+
 # Settlement Endpoints
 @app.get("/settlements/{activity_id}", response_model=Dict[str, Dict[str, float]])
 async def get_settlements(activity_id: str):
@@ -163,7 +205,12 @@ async def get_settlements(activity_id: str):
     for doc in db.collection("expenses").where("activity_id", "==", activity_id).stream():
         expenses.append(Expense(**doc.to_dict()))
 
-    settlements = calculate_settlements(activity, expenses)
+    payments = []
+    # Fetch all payments for simplicity. In a real app, you might filter by participants.
+    for doc in db.collection("payments").stream():
+        payments.append(Payment(**doc.to_dict()))
+
+    settlements = calculate_settlements(activity, expenses, payments)
     return settlements
 
 # Audit Log Endpoints

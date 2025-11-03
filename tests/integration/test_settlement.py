@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 from src.main import app, db
 import pytest
+from datetime import datetime
 
 from src.models import User, Activity, Expense
 from src.settlement import calculate_settlements
@@ -10,7 +11,7 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def clear_firestore():
     # Clear all collections before each test
-    for collection_name in ["users", "activities", "expenses"]:
+    for collection_name in ["users", "activities", "expenses", "payments"]:
         for doc in db.collection(collection_name).stream():
             doc.reference.delete()
     yield
@@ -323,6 +324,77 @@ def test_settlement_user_paid_and_owes():
     expected_settlements = {
         user2_id: {
             user1_id: 5.0
+        }
+    }
+    assert settlements == expected_settlements
+
+def test_settlement_with_full_payment():
+    # Scenario: Activity A1 with U1, U2. U1 pays 10. U2 pays U1 5.
+    # Expected Outcome: No outstanding settlements.
+
+    # Create users
+    user1_data = {"name": "U1", "email": "u1@example.com"}
+    user1_response = client.post("/users/", json=user1_data)
+    user1_id = user1_response.json()["id"]
+
+    user2_data = {"name": "U2", "email": "u2@example.com"}
+    user2_response = client.post("/users/", json=user2_data)
+    user2_id = user2_response.json()["id"]
+
+    # Create activity
+    activity_data = {"name": "A1", "participants": [user1_id, user2_id]}
+    activity_response = client.post("/activities/", json=activity_data)
+    activity_id = activity_response.json()["id"]
+
+    # Create expense
+    expense_data = {"activity_id": activity_id, "payer_id": user1_id, "amount": 10.0, "description": "Expense"}
+    client.post("/expenses/", json=expense_data)
+
+    # Create payment
+    payment_data = {"payer_id": user2_id, "payee_id": user1_id, "amount": 5.0, "timestamp": datetime.now().isoformat()}
+    client.post("/payments/", json=payment_data)
+
+    # Get settlements
+    settlements_response = client.get(f"/settlements/{activity_id}")
+    assert settlements_response.status_code == 200
+    settlements = settlements_response.json()
+
+    assert settlements == {}
+
+def test_settlement_with_partial_payment():
+    # Scenario: Activity A1 with U1, U2. U1 pays 10. U2 pays U1 3.
+    # Expected Outcome: U2 owes U1 2.
+
+    # Create users
+    user1_data = {"name": "U1", "email": "u1@example.com"}
+    user1_response = client.post("/users/", json=user1_data)
+    user1_id = user1_response.json()["id"]
+
+    user2_data = {"name": "U2", "email": "u2@example.com"}
+    user2_response = client.post("/users/", json=user2_data)
+    user2_id = user2_response.json()["id"]
+
+    # Create activity
+    activity_data = {"name": "A1", "participants": [user1_id, user2_id]}
+    activity_response = client.post("/activities/", json=activity_data)
+    activity_id = activity_response.json()["id"]
+
+    # Create expense
+    expense_data = {"activity_id": activity_id, "payer_id": user1_id, "amount": 10.0, "description": "Expense"}
+    client.post("/expenses/", json=expense_data)
+
+    # Create payment
+    payment_data = {"payer_id": user2_id, "payee_id": user1_id, "amount": 3.0, "timestamp": datetime.now().isoformat()}
+    client.post("/payments/", json=payment_data)
+
+    # Get settlements
+    settlements_response = client.get(f"/settlements/{activity_id}")
+    assert settlements_response.status_code == 200
+    settlements = settlements_response.json()
+
+    expected_settlements = {
+        user2_id: {
+            user1_id: 2.0
         }
     }
     assert settlements == expected_settlements

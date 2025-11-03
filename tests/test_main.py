@@ -8,7 +8,7 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def clear_firestore():
     # Clear all collections before each test
-    for collection_name in ["users", "activities", "expenses", "audit_logs"]:
+    for collection_name in ["users", "activities", "expenses", "audit_logs", "payments"]:
         for doc in db.collection(collection_name).stream():
             doc.reference.delete()
     yield
@@ -281,6 +281,25 @@ def test_delete_expense():
     get_response = client.get(f"/expenses/{expense_id}")
     assert get_response.status_code == 404
 
+# Payment Tests
+def test_create_payment():
+    user1_data = {"name": "Payer", "email": "payer@example.com"}
+    user1_response = client.post("/users/", json=user1_data)
+    payer_id = user1_response.json()["id"]
+
+    user2_data = {"name": "Payee", "email": "payee@example.com"}
+    user2_response = client.post("/users/", json=user2_data)
+    payee_id = user2_response.json()["id"]
+
+    payment_data = {"payer_id": payer_id, "payee_id": payee_id, "amount": 10.0, "timestamp": datetime.now().isoformat()}
+    response = client.post("/payments/", json=payment_data)
+    assert response.status_code == 200
+    created_payment = response.json()
+    assert created_payment["payer_id"] == payer_id
+    assert created_payment["payee_id"] == payee_id
+    assert created_payment["amount"] == 10.0
+    assert "id" in created_payment
+
 # Audit Log Tests
 def test_log_activity_creation():
     activity_data = {"name": "Logged Activity", "participants": []}
@@ -369,6 +388,23 @@ def test_log_expense_deletion():
     audit_logs_response = client.get("/audit-logs/")
     audit_logs = audit_logs_response.json()
     assert any(log["action"] == "EXPENSE_DELETED" and log["entity_id"] == expense_id for log in audit_logs)
+
+def test_log_payment_creation():
+    user1_data = {"name": "Payer Log", "email": "payerlog@example.com"}
+    user1_response = client.post("/users/", json=user1_data)
+    payer_id = user1_response.json()["id"]
+
+    user2_data = {"name": "Payee Log", "email": "payeelog@example.com"}
+    user2_response = client.post("/users/", json=user2_data)
+    payee_id = user2_response.json()["id"]
+
+    payment_data = {"payer_id": payer_id, "payee_id": payee_id, "amount": 10.0, "timestamp": datetime.now().isoformat()}
+    response = client.post("/payments/", json=payment_data)
+    payment_id = response.json()["id"]
+
+    audit_logs_response = client.get("/audit-logs/")
+    audit_logs = audit_logs_response.json()
+    assert any(log["action"] == "PAYMENT_CREATED" and log["entity_id"] == payment_id for log in audit_logs)
 
 def test_get_audit_logs():
     # Create some activities and expenses to generate logs

@@ -38,6 +38,22 @@ These test cases focus on the core settlement calculation logic.
   - U3 owes U2 5.
   - U3 owes U1 5.
 
+### Case 4: Settlement with Full Payment
+
+- **Scenario:**
+  - Activity A1: Participants U1, U2. U1 pays 10.
+  - U2 pays U1 5.
+- **Expected Outcome:**
+  - No outstanding settlements for Activity A1.
+
+### Case 5: Settlement with Partial Payment
+
+- **Scenario:**
+  - Activity A1: Participants U1, U2. U1 pays 10.
+  - U2 pays U1 3.
+- **Expected Outcome:**
+  - U2 owes U1 2.
+
 ## 2. Unit Test Cases
 
 ### 2.1. User Management (Admin)
@@ -74,6 +90,12 @@ These test cases focus on the core settlement calculation logic.
 - **Test:** Calculate settlement with multiple expenses from different payers.
 - **Test:** Calculate settlement with a user who has both paid and owes money.
 
+### 2.5. Payment Management
+
+- **Test:** Create a new payment.
+- **Test:** Update an existing payment.
+- **Test:** Delete a payment.
+
 ## 3. Audit Log
 
 - **Test:** Log activity creation.
@@ -82,4 +104,7 @@ These test cases focus on the core settlement calculation logic.
 - **Test:** Log expense creation.
 - **Test:** Log expense update.
 - **Test:** Log expense deletion.
+- **Test:** Log payment creation.
+- **Test:** Log payment update.
+- **Test:** Log payment deletion.
 - **Test:** Verify that the audit log page displays the logs correctly.

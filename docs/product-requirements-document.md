@@ -23,6 +23,9 @@ To create a frictionless way for friends to manage shared expenses, ensuring tra
   - An expense is linked to a user (who paid) and an activity.
 - **Settlement Calculation:**
   - The application will calculate and display the amount of money each user owes to others.
+- **Payment Logging:**
+  - Users can log payments made to settle debts.
+  - Payments can be for the full or partial amount owed.
 - **Transparency:**
   - All activities and expenses are visible to all users.
 - **Audit Log:**
@@ -56,6 +59,11 @@ To create a frictionless way for friends to manage shared expenses, ensuring tra
   - Payer (a User)
   - Activity (linked to an Activity)
   - Amount
+- **Payment:**
+  - Payer (a User)
+  - Payee (a User)
+  - Amount
+  - Date
 
 ### 5.2. User-Facing Functionality
 
@@ -70,6 +78,8 @@ To create a frictionless way for friends to manage shared expenses, ensuring tra
 - **Create/Edit/Delete Activity:** Forms to create, update, and delete activities.
 
 - **Create/Edit/Delete Expense:** Forms to create, update, and delete expenses within an activity.
+
+- **Log Payment:** A form to log a payment from one user to another.
 
 - **View Audit Log:** A dedicated page to display a user-friendly log of all CRUD actions performed on activities and expenses.
 
