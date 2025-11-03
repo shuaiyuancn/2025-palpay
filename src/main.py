@@ -48,6 +48,28 @@ async def get_user(user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
     return User(**user_doc.to_dict())
 
+# Activity Endpoints
+@app.post("/activities/", response_model=Activity)
+async def create_activity(activity: Activity):
+    activity_ref = db.collection("activities").document()
+    activity.id = activity_ref.id
+    activity_ref.set(activity.model_dump())
+    return activity
+
+@app.get("/activities/", response_model=List[Activity])
+async def get_all_activities():
+    activities = []
+    for doc in db.collection("activities").stream():
+        activities.append(Activity(**doc.to_dict()))
+    return activities
+
+@app.get("/activities/{activity_id}", response_model=Activity)
+async def get_activity(activity_id: str):
+    activity_doc = db.collection("activities").document(activity_id).get()
+    if not activity_doc.exists:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    return Activity(**activity_doc.to_dict())
+
 
 if __name__ == "__main__":
     import uvicorn

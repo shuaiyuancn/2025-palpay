@@ -9,6 +9,9 @@ def clear_firestore():
     # Clear the 'users' collection before each test
     for doc in db.collection("users").stream():
         doc.reference.delete()
+    # Clear the 'activities' collection before each test
+    for doc in db.collection("activities").stream():
+        doc.reference.delete()
     yield
 
 def test_read_root():
@@ -50,3 +53,39 @@ def test_get_all_users():
     user_names = [user["name"] for user in users]
     assert "Alice" in user_names
     assert "Bob" in user_names
+
+# Activity Tests
+def test_create_activity():
+    activity_data = {"name": "Weekend Trip", "participants": ["user1_id", "user2_id"]}
+    response = client.post("/activities/", json=activity_data)
+    assert response.status_code == 200
+    created_activity = response.json()
+    assert created_activity["name"] == "Weekend Trip"
+    assert created_activity["participants"] == ["user1_id", "user2_id"]
+    assert "id" in created_activity
+
+def test_get_activity():
+    # First, create an activity
+    activity_data = {"name": "Dinner", "participants": ["user3_id"]}
+    create_response = client.post("/activities/", json=activity_data)
+    created_activity_id = create_response.json()["id"]
+
+    # Then, get the activity
+    get_response = client.get(f"/activities/{created_activity_id}")
+    assert get_response.status_code == 200
+    retrieved_activity = get_response.json()
+    assert retrieved_activity["id"] == created_activity_id
+    assert retrieved_activity["name"] == "Dinner"
+
+def test_get_all_activities():
+    # Create a few activities
+    client.post("/activities/", json={"name": "Concert", "participants": ["user4_id"]})
+    client.post("/activities/", json={"name": "Movie", "participants": ["user5_id", "user6_id"]})
+
+    response = client.get("/activities/")
+    assert response.status_code == 200
+    activities = response.json()
+    assert len(activities) == 2
+    activity_names = [activity["name"] for activity in activities]
+    assert "Concert" in activity_names
+    assert "Movie" in activity_names
