@@ -398,3 +398,58 @@ def test_settlement_with_partial_payment():
         }
     }
     assert settlements == expected_settlements
+
+def test_complex_scenario_with_5_users():
+    # Create users
+    users = {}
+    for i in range(1, 6):
+        user_data = {"name": f"U{i}", "email": f"u{i}@example.com"}
+        response = client.post("/users/", json=user_data)
+        users[f"u{i}_id"] = response.json()["id"]
+
+    # Activity A1
+    activity1_data = {"name": "A1", "participants": list(users.values())}
+    activity1_response = client.post("/activities/", json=activity1_data)
+    activity1_id = activity1_response.json()["id"]
+
+    expense1_data = {"activity_id": activity1_id, "payer_id": users["u1_id"], "amount": 100.0}
+    client.post("/expenses/", json=expense1_data)
+
+    expense2_data = {"activity_id": activity1_id, "payer_id": users["u2_id"], "amount": 50.0}
+    client.post("/expenses/", json=expense2_data)
+
+    # Activity A2
+    activity2_data = {"name": "A2", "participants": [users["u1_id"], users["u2_id"], users["u3_id"]]}
+    activity2_response = client.post("/activities/", json=activity2_data)
+    activity2_id = activity2_response.json()["id"]
+
+    expense3_data = {"activity_id": activity2_id, "payer_id": users["u3_id"], "amount": 60.0}
+    client.post("/expenses/", json=expense3_data)
+
+    # Payments
+    payment1_data = {"payer_id": users["u4_id"], "payee_id": users["u1_id"], "amount": 10.0, "timestamp": datetime.now().isoformat()}
+    client.post("/payments/", json=payment1_data)
+
+    payment2_data = {"payer_id": users["u5_id"], "payee_id": users["u2_id"], "amount": 5.0, "timestamp": datetime.now().isoformat()}
+    client.post("/payments/", json=payment2_data)
+
+    # Get settlements for A1
+    settlements1_response = client.get(f"/settlements/{activity1_id}")
+    assert settlements1_response.status_code == 200
+    settlements1 = settlements1_response.json()
+    expected_settlements1 = {
+        users["u3_id"]: {users["u1_id"]: 30.0},
+        users["u4_id"]: {users["u1_id"]: 20.0},
+        users["u5_id"]: {users["u1_id"]: 10.0, users["u2_id"]: 15.0},
+    }
+    assert settlements1 == expected_settlements1
+
+    # Get settlements for A2
+    settlements2_response = client.get(f"/settlements/{activity2_id}")
+    assert settlements2_response.status_code == 200
+    settlements2 = settlements2_response.json()
+    expected_settlements2 = {
+        users["u1_id"]: {users["u3_id"]: 20.0},
+        users["u2_id"]: {users["u3_id"]: 20.0},
+    }
+    assert settlements2 == expected_settlements2

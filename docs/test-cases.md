@@ -54,6 +54,28 @@ These test cases focus on the core settlement calculation logic.
 - **Expected Outcome:**
   - U2 owes U1 2.
 
+### Case 6: Complex Scenario with 5 Users
+
+- **Scenario:**
+  - 5 Users: U1, U2, U3, U4, U5
+  - Activity A1 (all 5 users):
+    - U1 pays 100.
+    - U2 pays 50.
+  - Activity A2 (U1, U2, U3):
+    - U3 pays 60.
+  - Payments:
+    - U4 pays U1 10.
+    - U5 pays U2 5.
+- **Expected Outcome:**
+  - For Activity A1:
+    - U3 owes U1 30.
+    - U4 owes U1 20.
+    - U5 owes U1 10.
+    - U5 owes U2 15.
+  - For Activity A2:
+    - U1 owes U3 20.
+    - U2 owes U3 20.
+
 ## 2. Unit Test Cases
 
 ### 2.1. User Management (Admin)
