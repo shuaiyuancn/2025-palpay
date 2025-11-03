@@ -3,9 +3,10 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import os
 from dotenv import load_dotenv
-from typing import List
+from typing import List, Dict
 
 from src.models import User, Activity, Expense
+from src.settlement import calculate_settlements
 
 # Load environment variables
 load_dotenv()
@@ -91,6 +92,21 @@ async def get_expense(expense_id: str):
     if not expense_doc.exists:
         raise HTTPException(status_code=404, detail="Expense not found")
     return Expense(**expense_doc.to_dict())
+
+# Settlement Endpoints
+@app.get("/settlements/{activity_id}", response_model=Dict[str, Dict[str, float]])
+async def get_settlements(activity_id: str):
+    activity_doc = db.collection("activities").document(activity_id).get()
+    if not activity_doc.exists:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    activity = Activity(**activity_doc.to_dict())
+
+    expenses = []
+    for doc in db.collection("expenses").where("activity_id", "==", activity_id).stream():
+        expenses.append(Expense(**doc.to_dict()))
+
+    settlements = calculate_settlements(activity, expenses)
+    return settlements
 
 
 if __name__ == "__main__":
