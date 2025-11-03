@@ -130,3 +130,5 @@ yarn.lock
 
 # VSCode
 .vscode/
+
+firebase-service-account.json
