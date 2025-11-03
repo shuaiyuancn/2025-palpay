@@ -73,7 +73,7 @@ To create a frictionless way for friends to manage shared expenses, ensuring tra
 
 - **View Expenses:** A detailed view of an activity, showing all associated expenses, who paid, and the amount.
 
-- **View Settlements:** A summary page displaying a matrix view of who owes whom. If a user owes zero to another, the corresponding cell will be empty. If a row or column in the matrix is entirely empty (meaning a user neither owes nor is owed by anyone), that row or column will be omitted.
+- **View Settlements:** A summary page displaying a consolidated matrix view of who owes whom across all activities. If a user owes zero to another, the corresponding cell will be empty. If a row or column in the matrix is entirely empty (meaning a user neither owes nor is owed by anyone), that row or column will be omitted.
 
 - **Create/Edit/Delete Activity:** Forms to create, update, and delete activities.
 

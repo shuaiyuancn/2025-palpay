@@ -67,14 +67,10 @@ These test cases focus on the core settlement calculation logic.
     - U4 pays U1 10.
     - U5 pays U2 5.
 - **Expected Outcome:**
-  - For Activity A1:
-    - U3 owes U1 30.
-    - U4 owes U1 20.
-    - U5 owes U1 10.
-    - U5 owes U2 15.
-  - For Activity A2:
-    - U1 owes U3 20.
-    - U2 owes U3 20.
+  - U2 owes U1 5.
+  - U4 owes U1 20.
+  - U5 owes U1 15.
+  - U5 owes U3 10.
 
 ## 2. Unit Test Cases
 

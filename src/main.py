@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 from typing import List, Dict
 
-from src.models import User, Activity, Expense, Payment, AuditLog
+from src.models import User, Activity, Expense, Payment, AuditLog, Settlement
 from src.settlement import calculate_settlements
 from src.audit_log import log_audit_event
 
@@ -194,23 +194,38 @@ async def delete_payment(payment_id: str):
     return
 
 # Settlement Endpoints
-@app.get("/settlements/{activity_id}", response_model=Dict[str, Dict[str, float]])
-async def get_settlements(activity_id: str):
-    activity_doc = db.collection("activities").document(activity_id).get()
-    if not activity_doc.exists:
-        raise HTTPException(status_code=404, detail="Activity not found")
-    activity = Activity(**activity_doc.to_dict())
+@app.post("/settlements/calculate", status_code=200)
+async def calculate_all_settlements():
+    users = [User(**doc.to_dict()) for doc in db.collection("users").stream()]
+    activities = [Activity(**doc.to_dict()) for doc in db.collection("activities").stream()]
+    expenses = [Expense(**doc.to_dict()) for doc in db.collection("expenses").stream()]
+    payments = [Payment(**doc.to_dict()) for doc in db.collection("payments").stream()]
 
-    expenses = []
-    for doc in db.collection("expenses").where("activity_id", "==", activity_id).stream():
-        expenses.append(Expense(**doc.to_dict()))
+    settlements = calculate_settlements(users, activities, expenses, payments)
 
-    payments = []
-    # Fetch all payments for simplicity. In a real app, you might filter by participants.
-    for doc in db.collection("payments").stream():
-        payments.append(Payment(**doc.to_dict()))
+    # Clear existing settlements
+    for doc in db.collection("settlements").stream():
+        doc.reference.delete()
 
-    settlements = calculate_settlements(activity, expenses, payments)
+    # Store new settlements
+    for debtor_id, owes in settlements.items():
+        for creditor_id, amount in owes.items():
+            settlement_ref = db.collection("settlements").document()
+            settlement = Settlement(
+                id=settlement_ref.id,
+                debtor_id=debtor_id,
+                creditor_id=creditor_id,
+                amount=amount,
+            )
+            settlement_ref.set(settlement.model_dump())
+
+    return {"message": "Settlements calculated and updated successfully."}
+
+@app.get("/settlements/", response_model=List[Settlement])
+async def get_settlements():
+    settlements = []
+    for doc in db.collection("settlements").stream():
+        settlements.append(Settlement(**doc.to_dict()))
     return settlements
 
 # Audit Log Endpoints

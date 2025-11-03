@@ -27,6 +27,12 @@ class Payment(BaseModel):
     amount: float
     timestamp: datetime
 
+class Settlement(BaseModel):
+    id: Optional[str] = None
+    debtor_id: str
+    creditor_id: str
+    amount: float
+
 class AuditLog(BaseModel):
     id: Optional[str] = None
     timestamp: datetime
