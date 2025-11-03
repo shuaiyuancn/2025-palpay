@@ -6,15 +6,10 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def clear_firestore():
-    # Clear the 'users' collection before each test
-    for doc in db.collection("users").stream():
-        doc.reference.delete()
-    # Clear the 'activities' collection before each test
-    for doc in db.collection("activities").stream():
-        doc.reference.delete()
-    # Clear the 'expenses' collection before each test
-    for doc in db.collection("expenses").stream():
-        doc.reference.delete()
+    # Clear all collections before each test
+    for collection_name in ["users", "activities", "expenses"]:
+        for doc in db.collection(collection_name).stream():
+            doc.reference.delete()
     yield
 
 def test_read_root():
@@ -57,6 +52,40 @@ def test_get_all_users():
     assert "Alice" in user_names
     assert "Bob" in user_names
 
+def test_update_user():
+    # First, create a user
+    user_data = {"name": "Original Name", "email": "original@example.com"}
+    create_response = client.post("/users/", json=user_data)
+    user_id = create_response.json()["id"]
+
+    # Update the user
+    updated_user_data = {"id": user_id, "name": "Updated Name", "email": "updated@example.com"}
+    update_response = client.put(f"/users/{user_id}", json=updated_user_data)
+    assert update_response.status_code == 200
+    updated_user = update_response.json()
+    assert updated_user["name"] == "Updated Name"
+    assert updated_user["email"] == "updated@example.com"
+
+    # Verify the update by getting the user
+    get_response = client.get(f"/users/{user_id}")
+    assert get_response.status_code == 200
+    retrieved_user = get_response.json()
+    assert retrieved_user["name"] == "Updated Name"
+
+def test_delete_user():
+    # First, create a user
+    user_data = {"name": "User to Delete", "email": "delete@example.com"}
+    create_response = client.post("/users/", json=user_data)
+    user_id = create_response.json()["id"]
+
+    # Delete the user
+    delete_response = client.delete(f"/users/{user_id}")
+    assert delete_response.status_code == 204
+
+    # Verify deletion by trying to get the user
+    get_response = client.get(f"/users/{user_id}")
+    assert get_response.status_code == 404
+
 # Activity Tests
 def test_create_activity():
     activity_data = {"name": "Weekend Trip", "participants": []}
@@ -92,6 +121,40 @@ def test_get_all_activities():
     activity_names = [activity["name"] for activity in activities]
     assert "Concert" in activity_names
     assert "Movie" in activity_names
+
+def test_update_activity():
+    # First, create an activity
+    activity_data = {"name": "Original Activity", "participants": ["user_a"]}
+    create_response = client.post("/activities/", json=activity_data)
+    activity_id = create_response.json()["id"]
+
+    # Update the activity
+    updated_activity_data = {"id": activity_id, "name": "Updated Activity", "participants": ["user_a", "user_b"]}
+    update_response = client.put(f"/activities/{activity_id}", json=updated_activity_data)
+    assert update_response.status_code == 200
+    updated_activity = update_response.json()
+    assert updated_activity["name"] == "Updated Activity"
+    assert updated_activity["participants"] == ["user_a", "user_b"]
+
+    # Verify the update by getting the activity
+    get_response = client.get(f"/activities/{activity_id}")
+    assert get_response.status_code == 200
+    retrieved_activity = get_response.json()
+    assert retrieved_activity["name"] == "Updated Activity"
+
+def test_delete_activity():
+    # First, create an activity
+    activity_data = {"name": "Activity to Delete", "participants": []}
+    create_response = client.post("/activities/", json=activity_data)
+    activity_id = create_response.json()["id"]
+
+    # Delete the activity
+    delete_response = client.delete(f"/activities/{activity_id}")
+    assert delete_response.status_code == 204
+
+    # Verify deletion by trying to get the activity
+    get_response = client.get(f"/activities/{activity_id}")
+    assert get_response.status_code == 404
 
 # Expense Tests
 def test_create_expense():
@@ -164,3 +227,55 @@ def test_get_all_expenses():
     expense_descriptions = [expense["description"] for expense in expenses]
     assert "Coffee" in expense_descriptions
     assert "Lunch" in expense_descriptions
+
+def test_update_expense():
+    # First, create a user and an activity for the expense
+    user_data = {"name": "Payer User 3", "email": "payer3@example.com"}
+    user_response = client.post("/users/", json=user_data)
+    payer_id = user_response.json()["id"]
+
+    activity_data = {"name": "Test Activity 3", "participants": [payer_id]}
+    activity_response = client.post("/activities/", json=activity_data)
+    activity_id = activity_response.json()["id"]
+
+    # Create an expense
+    expense_data = {"activity_id": activity_id, "payer_id": payer_id, "amount": 100.0, "description": "Original Expense"}
+    create_response = client.post("/expenses/", json=expense_data)
+    expense_id = create_response.json()["id"]
+
+    # Update the expense
+    updated_expense_data = {"id": expense_id, "activity_id": activity_id, "payer_id": payer_id, "amount": 150.0, "description": "Updated Expense"}
+    update_response = client.put(f"/expenses/{expense_id}", json=updated_expense_data)
+    assert update_response.status_code == 200
+    updated_expense = update_response.json()
+    assert updated_expense["amount"] == 150.0
+    assert updated_expense["description"] == "Updated Expense"
+
+    # Verify the update by getting the expense
+    get_response = client.get(f"/expenses/{expense_id}")
+    assert get_response.status_code == 200
+    retrieved_expense = get_response.json()
+    assert retrieved_expense["amount"] == 150.0
+
+def test_delete_expense():
+    # First, create a user and an activity for the expense
+    user_data = {"name": "Payer User 4", "email": "payer4@example.com"}
+    user_response = client.post("/users/", json=user_data)
+    payer_id = user_response.json()["id"]
+
+    activity_data = {"name": "Test Activity 4", "participants": [payer_id]}
+    activity_response = client.post("/activities/", json=activity_data)
+    activity_id = activity_response.json()["id"]
+
+    # Create an expense
+    expense_data = {"activity_id": activity_id, "payer_id": payer_id, "amount": 75.0, "description": "Expense to Delete"}
+    create_response = client.post("/expenses/", json=expense_data)
+    expense_id = create_response.json()["id"]
+
+    # Delete the expense
+    delete_response = client.delete(f"/expenses/{expense_id}")
+    assert delete_response.status_code == 204
+
+    # Verify deletion by trying to get the expense
+    get_response = client.get(f"/expenses/{expense_id}")
+    assert get_response.status_code == 404

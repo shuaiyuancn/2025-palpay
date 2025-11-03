@@ -49,6 +49,23 @@ async def get_user(user_id: str):
         raise HTTPException(status_code=404, detail="User not found")
     return User(**user_doc.to_dict())
 
+@app.put("/users/{user_id}", response_model=User)
+async def update_user(user_id: str, user: User):
+    user_ref = db.collection("users").document(user_id)
+    if not user_ref.get().exists:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.id = user_id  # Ensure the ID in the payload matches the path ID
+    user_ref.set(user.model_dump())
+    return user
+
+@app.delete("/users/{user_id}", status_code=204)
+async def delete_user(user_id: str):
+    user_ref = db.collection("users").document(user_id)
+    if not user_ref.get().exists:
+        raise HTTPException(status_code=404, detail="User not found")
+    user_ref.delete()
+    return
+
 # Activity Endpoints
 @app.post("/activities/", response_model=Activity)
 async def create_activity(activity: Activity):
@@ -71,6 +88,23 @@ async def get_activity(activity_id: str):
         raise HTTPException(status_code=404, detail="Activity not found")
     return Activity(**activity_doc.to_dict())
 
+@app.put("/activities/{activity_id}", response_model=Activity)
+async def update_activity(activity_id: str, activity: Activity):
+    activity_ref = db.collection("activities").document(activity_id)
+    if not activity_ref.get().exists:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    activity.id = activity_id
+    activity_ref.set(activity.model_dump())
+    return activity
+
+@app.delete("/activities/{activity_id}", status_code=204)
+async def delete_activity(activity_id: str):
+    activity_ref = db.collection("activities").document(activity_id)
+    if not activity_ref.get().exists:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    activity_ref.delete()
+    return
+
 # Expense Endpoints
 @app.post("/expenses/", response_model=Expense)
 async def create_expense(expense: Expense):
@@ -92,6 +126,23 @@ async def get_expense(expense_id: str):
     if not expense_doc.exists:
         raise HTTPException(status_code=404, detail="Expense not found")
     return Expense(**expense_doc.to_dict())
+
+@app.put("/expenses/{expense_id}", response_model=Expense)
+async def update_expense(expense_id: str, expense: Expense):
+    expense_ref = db.collection("expenses").document(expense_id)
+    if not expense_ref.get().exists:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    expense.id = expense_id
+    expense_ref.set(expense.model_dump())
+    return expense
+
+@app.delete("/expenses/{expense_id}", status_code=204)
+async def delete_expense(expense_id: str):
+    expense_ref = db.collection("expenses").document(expense_id)
+    if not expense_ref.get().exists:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    expense_ref.delete()
+    return
 
 # Settlement Endpoints
 @app.get("/settlements/{activity_id}", response_model=Dict[str, Dict[str, float]])
