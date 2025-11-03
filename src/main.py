@@ -1,4 +1,4 @@
-from flask import Flask
+from fastapi import FastAPI
 import firebase_admin
 from firebase_admin import credentials, firestore
 import os
@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Initialize Flask app
-app = Flask(__name__)
+# Initialize FastAPI app
+app = FastAPI()
 
 # Initialize Firebase Admin SDK
 try:
@@ -19,9 +19,10 @@ try:
 except Exception as e:
     print(f"Error initializing Firebase: {e}")
 
-@app.route('/')
-def hello_world():
-    return 'Hello, PalPay!'
+@app.get("/")
+def read_root():
+    return {"Hello": "PalPay"}
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
