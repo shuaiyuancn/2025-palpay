@@ -23,7 +23,7 @@ in the admin control, the website has the following functions
 
 # implementation
 
-the website is implemented using python, django, and other necessary tools. python env is managed by uv.
+the website is implemented using python, fastapi, and other necessary tools. python env is managed by uv.
 
 the website is deployed in gcp using firebase free plan. the service account with admin access is configured in .env
 

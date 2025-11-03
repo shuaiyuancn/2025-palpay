@@ -4,10 +4,10 @@ This document outlines the test cases for the PalPay application, covering both 
 
 ## How to Run Tests
 
-The tests are run using Django's built-in testing framework. To execute all tests, run the following command from the project's root directory:
+The tests are run using `pytest`. To execute all tests, run the following command from the project's root directory:
 
 ```bash
-python manage.py test
+pytest
 ```
 
 ## 1. Integration Test Cases
