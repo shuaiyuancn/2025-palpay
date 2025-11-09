@@ -16,7 +16,7 @@ app = FastAPI()
 
 # Initialize Firebase Admin SDK
 try:
-    cred = credentials.Certificate(os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY_PATH"))
+    cred = credentials.Certificate(os.getenv("SERVICE_ACCOUNT_KEY_PATH"))
     firebase_admin.initialize_app(cred)
     db = firestore.client()
     print("Firebase initialized successfully!")
