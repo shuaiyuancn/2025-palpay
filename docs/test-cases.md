@@ -12,103 +12,76 @@ pytest
 
 ## 1. Integration Test Cases
 
-These test cases focus on the core settlement calculation logic.
+These test cases focus on the core balance update logic.
 
-### Case 1: Simple Split
+### Case 1: Simple Expense Creation
 
-- **Scenario:** User U1 and User U2 participate in Activity A1. U1 pays 10.
-- **Expected Outcome:** U2 owes U1 5.
+- **Scenario:** User U1 and User U2 participate in an activity. U1 pays 100.
+- **Expected Outcome:** A balance record is created showing U2 owes U1 50.
 
-### Case 2: Multiple Activities, No Overlap
+### Case 2: Multiple Participants
+
+- **Scenario:** User U1, U2, and U3 participate in an activity. U1 pays 90.
+- **Expected Outcome:**
+  - A balance record is created showing U2 owes U1 30.
+  - A balance record is created showing U3 owes U1 30.
+
+### Case 3: Existing Balance Update
 
 - **Scenario:**
-  - Activity A1: Participants U1, U2. U1 pays 10.
-  - Activity A2: Participants U2, U3. U2 pays 10.
-- **Expected Outcome:**
-  - U2 owes U1 5.
-  - U3 owes U2 5.
+  - U1 and U2 are in an activity. U1 pays 50 (U2 owes U1 25).
+  - U1 pays another 50 in the same activity.
+- **Expected Outcome:** The existing balance is updated to show U2 owes U1 50.
 
-### Case 3: Multiple Activities, With Overlap
+### Case 4: Balance Reversal
 
 - **Scenario:**
-  - Activity A1: Participants U1, U2, U3. U1 pays 15.
-  - Activity A2: Participants U2, U3. U2 pays 10.
-- **Expected Outcome:**
-  - U2 owes U1 5.
-  - U3 owes U2 5.
-  - U3 owes U1 5.
+  - U1 and U2 are in an activity. U1 pays 20 (U2 owes U1 10).
+  - U2 pays U1 20.
+- **Expected Outcome:** The balance is reversed to show U1 owes U2 10.
 
-### Case 4: Settlement with Full Payment
+### Case 5: Zero Balance Deletion
 
 - **Scenario:**
-  - Activity A1: Participants U1, U2. U1 pays 10.
-  - U2 pays U1 5.
-- **Expected Outcome:**
-  - No outstanding settlements for Activity A1.
+  - U1 and U2 are in an activity. U1 pays 30 (U2 owes U1 15).
+  - U2 pays U1 15
+- **Expected Outcome:** The balance between U1 and U2 is zero.
 
-### Case 5: Settlement with Partial Payment
-
-- **Scenario:**
-  - Activity A1: Participants U1, U2. U1 pays 10.
-  - U2 pays U1 3.
-- **Expected Outcome:**
-  - U2 owes U1 2.
-
-### Case 6: Complex Scenario with 5 Users
+### Case 6: Complex Scenario with Simplified Settlement
 
 - **Scenario:**
   - 5 Users: U1, U2, U3, U4, U5
   - Activity A1 (all 5 users):
     - U1 pays 100.
     - U2 pays 50.
+    - At this point, U3, U4 and U5 owe U1 23.33; they owe U2 6.67; U2 owes U1 nothing.
   - Activity A2 (U1, U2, U3):
     - U3 pays 60.
-  - Payments:
-    - U4 pays U1 10.
-    - U5 pays U2 5.
-- **Expected Outcome:**
-  - U2 owes U1 5.
-  - U4 owes U1 20.
-  - U5 owes U1 15.
-  - U5 owes U3 10.
+    - At this point, U3 owes U1 3.33, U3 owes U2 nothing, U2 owes U3 13.33, U4 and U5 owe U1 23.33, U4 and U5 owe U2 6.67
+  - U4 pays U1 30
+    - At this point, U1 owes U4 6.67
+    - Note although U4 also owes U2 6.67, we don't simplified it as U1 owes U2 6.67, U1 owes U4 nothing, U4 owes U2 nothing
 
 ## 2. Unit Test Cases
 
 ### 2.1. User Management (Admin)
 
 - **Test:** Add a new user.
-  - **Steps:**
-    1. Access the admin user creation page.
-    2. Fill in the user's name, payment details, and email.
-    3. Submit the form.
-  - **Expected Outcome:** The new user is added to the system and appears in the user list.
 - **Test:** Update an existing user.
-  - **Steps:**
-    1. Access the admin user edit page for a specific user.
-    2. Change the user's payment details.
-    3. Submit the form.
-  - **Expected Outcome:** The user's details are updated.
 
 ### 2.2. Activity Management
 
 - **Test:** Create a new activity.
-- **Test:** Update an existing activity (e.g., change the name, add/remove participants).
+- **Test:** Update an existing activity.
 - **Test:** Delete an activity.
 
 ### 2.3. Expense Management
 
-- **Test:** Create a new expense for an activity.
-- **Test:** Update an existing expense (e.g., change the amount or the payer).
+- **Test:** Create a new expense.
+- **Test:** Update an existing expense.
 - **Test:** Delete an expense.
 
-### 2.4. Settlement Calculation
-
-- **Test:** Calculate settlement with no expenses.
-- **Test:** Calculate settlement with one expense.
-- **Test:** Calculate settlement with multiple expenses from different payers.
-- **Test:** Calculate settlement with a user who has both paid and owes money.
-
-### 2.5. Payment Management
+### 2.4. Payment Management
 
 - **Test:** Create a new payment.
 - **Test:** Update an existing payment.
@@ -116,13 +89,7 @@ These test cases focus on the core settlement calculation logic.
 
 ## 3. Audit Log
 
-- **Test:** Log activity creation.
-- **Test:** Log activity update.
-- **Test:** Log activity deletion.
-- **Test:** Log expense creation.
-- **Test:** Log expense update.
-- **Test:** Log expense deletion.
-- **Test:** Log payment creation.
-- **Test:** Log payment update.
-- **Test:** Log payment deletion.
+- **Test:** Log activity creation, update, and deletion.
+- **Test:** Log expense creation, update, and deletion.
+- **Test:** Log payment creation, update, and deletion.
 - **Test:** Verify that the audit log page displays the logs correctly.

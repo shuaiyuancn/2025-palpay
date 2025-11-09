@@ -3,14 +3,17 @@ this folder contains doc and code for the website "palpay" which allows a group 
 # use cases
 
 the website has the following entities
-- user (name, payment details, and email)
+- user (name, email, and payment details which are simple text for information only)
 - activity (name, date, participants which are a list of users)
-- expense (linked with user and activity, amount)
+- expense (one user pays for some cost in one activity; there could be multiple expenses in one activity, and they could be paid by different users)
+- balance (one user owes some amount to another user)
+- payment (one user pays another to settle the balance)
 
 the website provides the following functions
 - a user can create/update/delete an activity
-- a user can create/update/delete expense
-- shows amount of money that one user is owed to others
+- a user can create/update/delete an expense
+- a user can create/update/delete a payment
+- shows amount of money that one user is owed to one other
 - all activities are logged and visible to all users
 
 the website doesn't need these functions
@@ -27,32 +30,10 @@ the website is implemented using python, fastapi, and other necessary tools. pyt
 
 the website is deployed in gcp using firebase free plan. the service account with admin access is configured in .env
 
-the website uses github. the address is git@github.com:shuaiyuancn/palpay.git
+the website uses github. the address is git@github.com:shuaiyuancn/2025-palpay.git
 
 the project uses a local todo.md to track tasks and progress.
 
 during the development, do frequent commit with concise message.
 
 set up unit tests and integration tests. do test-driven dev. make sure all tests pass with every commit.
-
-# integration test cases
-
-use these cases to make sure the calculation logic is correct.
-these are basic test cases, don't limit yourself to just these.
-
-## case 1
-
-user u1 and u2 joined activity a1. u1 paid 10. in the end u2 owe u1 5.
-
-## case 2
-
-user u1 and u2 joined activity a1. u1 paid 10.
-u2 and u3 joined activity a2. u2 paid 10.
-in the end u2 owe u1 5. u3 owe u2 5.
-
-## case 3
-
-user u1, u2, and u3 joined activity a1. u1 paid 15.
-u2 and u3 joined activity a2. u2 paid 10.
-in the end u2 owe u1 5. u3 owe u2 5. u3 owe u1 5.
-

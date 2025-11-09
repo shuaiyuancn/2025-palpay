@@ -3,41 +3,41 @@ from typing import List, Optional, Dict
 from datetime import datetime
 
 class User(BaseModel):
-    id: Optional[str] = None
+    id: str
     name: str
     email: str
     payment_details: Optional[str] = None
 
 class Activity(BaseModel):
-    id: Optional[str] = None
+    id: str
     name: str
-    participants: List[str]  # List of user IDs
+    participants: List[User]
 
 class Expense(BaseModel):
-    id: Optional[str] = None
+    id: str
     activity_id: str
-    payer_id: str
+    paid_by_user_id: str
     amount: float
+    participants: List[User]
     description: Optional[str] = None
 
 class Payment(BaseModel):
-    id: Optional[str] = None
-    payer_id: str
-    payee_id: str
+    id: str
+    from_user_id: str
+    to_user_id: str
     amount: float
-    timestamp: datetime
+    timestamp: datetime = datetime.now()
 
-class Settlement(BaseModel):
-    id: Optional[str] = None
-    debtor_id: str
-    creditor_id: str
+class Balance(BaseModel):
+    debtor: User
+    creditor: User
     amount: float
 
 class AuditLog(BaseModel):
     id: Optional[str] = None
     timestamp: datetime
-    action: str  # e.g., "ACTIVITY_CREATED", "EXPENSE_UPDATED"
-    entity_type: str  # e.g., "Activity", "Expense"
+    action: str
+    entity_type: str
     entity_id: str
-    user_id: Optional[str] = None  # User who performed the action
-    details: Optional[Dict] = None # Additional details about the change
+    user_id: Optional[str] = None
+    details: Optional[Dict] = None
