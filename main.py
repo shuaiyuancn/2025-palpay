@@ -239,9 +239,10 @@ def get():
                                 ) for e in recent_events]
                             ) if recent_events else P("No events yet."),
                         ),
-                        Div(cls="card-action")(
+                        Div(cls="card-action center-align")(
                             A("New Event", href="/events/new", cls="btn-flat teal-text"),
-                            A("View All Events", href="/events/all", cls="btn-flat teal-text right")
+                            " ",
+                            A("All Events", href="/events/all", cls="btn-flat teal-text")
                         )
                     )
                 )
@@ -259,9 +260,10 @@ def get():
                                     Label("Name", **{'for': 'user_name'})
                                 )
                             ),
-                            Div(cls="card-action", style="border-top: 0")(
+                            Div(cls="card-action center-align", style="border-top: 0")(
                                 Button("Add", type="submit", cls="btn-small waves-effect waves-light"),
-                                A("View All Users", href="/users", cls="btn-flat teal-text right")
+                                " ",
+                                A("All Users", href="/users", cls="btn-flat teal-text")
                             ),
                             action="/users", method="post"
                         )
