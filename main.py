@@ -217,14 +217,8 @@ def get():
             # Row 1: Quick Actions & Stats
             Div(cls="row")(
                 Div(cls="col s12")(
-                    Div(cls="card")(
-                        Div(cls="card-content")(
-                            Span("Quick Balance", cls="card-title"),
-                            P("Check who owes whom."),
-                        ),
-                        Div(cls="card-action")(
-                            A("View Balance Sheet", href="/balances", cls="btn-flat teal-text")
-                        )
+                    Div(cls="card-panel center-align")(
+                        A("View Balance Sheet", href="/balances", cls="btn-flat teal-text")
                     )
                 )
             ),
@@ -246,7 +240,7 @@ def get():
                             ) if recent_events else P("No events yet."),
                         ),
                         Div(cls="card-action")(
-                            A("New Event", href="/events/new", cls="btn waves-effect waves-light"),
+                            A("New Event", href="/events/new", cls="btn-flat teal-text"),
                             A("View All Events", href="/events/all", cls="btn-flat teal-text right")
                         )
                     )
@@ -257,28 +251,31 @@ def get():
             Div(cls="row")(
                 Div(cls="col s12")(
                     Div(cls="card")(
-                        Div(cls="card-content")(
-                            Span("Quick Add User", cls="card-title"),
-                            Form(
+                        Form(
+                            Div(cls="card-content")(
+                                Span("Quick Add User", cls="card-title"),
                                 Div(cls="input-field")(
                                     Input(name="name", id="user_name", type="text", required=True),
                                     Label("Name", **{'for': 'user_name'})
-                                ),
+                                )
+                            ),
+                            Div(cls="card-action", style="border-top: 0")(
                                 Button("Add", type="submit", cls="btn-small waves-effect waves-light"),
-                                " ",
-                                A("View All Users", href="/users", cls="btn-flat"),
-                                action="/users", method="post"
-                            )
+                                A("View All Users", href="/users", cls="btn-flat teal-text right")
+                            ),
+                            action="/users", method="post"
                         )
                     )
-                ),
+                )
+            ),
+            Div(cls="row")(
                 Div(cls="col s12")(
                      Div(cls="card grey lighten-4")(
                         Div(cls="card-content")(
                             Span("Admin Tools", cls="card-title"),
-                            A("Merge Tools", href="/tools", cls="btn-small grey darken-1"),
+                            A("Merge Tools", href="/tools", cls="btn-flat teal-text"),
                             " ",
-                            A("Audit Logs", href="/logs", cls="btn-small grey darken-1")
+                            A("Audit Logs", href="/logs", cls="btn-flat teal-text")
                         )
                     )
                 )
@@ -384,18 +381,13 @@ def post(source_id: int, target_id: int):
     if source_id == target_id: return Titled("Error", P("Cannot merge user into themselves."))
     
     # 1. Update Event Participants (Handle duplicates)
-    # Get events where Source is a participant
     source_parts = event_participants(where=f"user_id={source_id}")
     for sp in source_parts:
-        # Check if Target is already in this event
         exists = event_participants(where=f"event_id={sp.event_id} AND user_id={target_id}")
         if exists:
-            # Target is already there, just delete Source's record
-            event_participants.delete(sp.id)
+            db.q(f"DELETE FROM event_participant WHERE event_id = {sp.event_id} AND user_id = {source_id}")
         else:
-            # Move Source's record to Target
-            sp.user_id = target_id
-            event_participants.update(sp)
+            db.q(f"UPDATE event_participant SET user_id = {target_id} WHERE event_id = {sp.event_id} AND user_id = {source_id}")
             
     # 2. Update Costs (Payer)
     db.q(f"UPDATE cost SET payer_id = {target_id} WHERE payer_id = {source_id}")
@@ -422,10 +414,9 @@ def post(source_id: int, target_id: int):
     for sp in source_parts:
         exists = event_participants(where=f"event_id={target_id} AND user_id={sp.user_id}")
         if not exists:
-            sp.event_id = target_id
-            event_participants.update(sp)
+            db.q(f"UPDATE event_participant SET event_id = {target_id} WHERE event_id = {source_id} AND user_id = {sp.user_id}")
         else:
-            event_participants.delete(sp.id)
+            db.q(f"DELETE FROM event_participant WHERE event_id = {source_id} AND user_id = {sp.user_id}")
 
     # 2. Move Costs
     db.q(f"UPDATE cost SET event_id = {target_id} WHERE event_id = {source_id}")
@@ -597,14 +588,13 @@ def post(id: int, name: str, date: str, participants: List[int]):
     ev.date = date
     events.update(ev)
     
-    parts = db.q(f"SELECT id, user_id FROM event_participant WHERE event_id = {id}")
-    current_map = {p['user_id']: p['id'] for p in parts}
-    current_ids = set(current_map.keys())
+    parts = db.q(f"SELECT user_id FROM event_participant WHERE event_id = {id}")
+    current_ids = {p['user_id'] for p in parts}
     new_ids = set(participants)
     
     to_remove = current_ids - new_ids
     for uid in to_remove:
-        event_participants.delete(current_map[uid])
+        db.q(f"DELETE FROM event_participant WHERE event_id = {id} AND user_id = {uid}")
         
     to_add = new_ids - current_ids
     for uid in to_add:
@@ -638,10 +628,19 @@ def post(id: int, amount: float, comment: str, payer_id: int):
     return Redirect(f"/events/{id}")
 
 @rt('/balances')
-def get():
-    all_bals = balances(order_by="amount desc")
+def get(sort: str = 'amount'):
     all_users = users()
     user_map = {u.id: u.name for u in all_users}
+    
+    all_bals = balances()
+    
+    # Sorting logic
+    if sort == 'debtor':
+        all_bals.sort(key=lambda b: user_map.get(b.debtor_id, "").lower())
+    elif sort == 'creditor':
+        all_bals.sort(key=lambda b: user_map.get(b.creditor_id, "").lower())
+    else: # amount
+        all_bals.sort(key=lambda b: b.amount, reverse=True)
     
     return Titled("Balance Sheet",
         Div(cls="container")(
@@ -651,7 +650,11 @@ def get():
                         Div(cls="card-content")(
                             Span("Net Debts", cls="card-title"),
                             Table(cls="striped highlight")(
-                                Thead(Tr(Th("Debtor (Owes)"), Th("Creditor (Is Owed)"), Th("Amount"))),
+                                Thead(Tr(
+                                    Th(A("Debtor (Owes)", href="?sort=debtor", cls="teal-text")), 
+                                    Th(A("Creditor (Is Owed)", href="?sort=creditor", cls="teal-text")), 
+                                    Th(A("Amount", href="?sort=amount", cls="teal-text"))
+                                )),
                                 Tbody(*[
                                     Tr(
                                         Td(user_map.get(b.debtor_id, "Unknown")),
