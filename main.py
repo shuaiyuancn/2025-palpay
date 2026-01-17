@@ -196,6 +196,8 @@ def recalculate_balances():
         if creditor['amount'] < 0.01: c_idx += 1
 
 # --- App Setup ---
+auth_secret = os.getenv("AUTH_SECRET", "palpay-secret-key-fallback")
+
 app, rt = fast_app(
     hdrs=(
         Link(rel='stylesheet', href='https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css'),
@@ -203,7 +205,8 @@ app, rt = fast_app(
         Script(src='https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js'),
         Link(rel='stylesheet', href='index.css'),
     ),
-    pico=False
+    pico=False,
+    secret_key=auth_secret
 )
 
 # --- Views ---
@@ -448,7 +451,7 @@ def get():
                 Div(cls="input-field")(
                     Select(
                         *[Option(u.name, value=u.id) for u in all_users],
-                        name="participants", multiple=True, required=True
+                        name="participants", multiple=True
                     ),
                     Label("Participants")
                 ),
@@ -459,7 +462,7 @@ def get():
         )
 
 @rt('/events')
-def post(name: str, date: str, participants: List[int]):
+def post(name: str, date: str, participants: List[int] = []):
     try:
         e = events.insert(Event(name=name, date=date))
         e_id = e.id
@@ -571,7 +574,7 @@ def get(id: int):
                 Div(cls="input-field")(
                     Select(
                         *[Option(u.name, value=u.id, selected=(u.id in current_ids)) for u in all_users],
-                        name="participants", multiple=True, required=True
+                        name="participants", multiple=True
                     ),
                     Label("Participants")
                 ),
